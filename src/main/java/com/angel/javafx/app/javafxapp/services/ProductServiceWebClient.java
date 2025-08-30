@@ -36,8 +36,8 @@ public class ProductServiceWebClient implements ProductService {
     }
 
     @Override
-    public Product update(Product product) {
-        return webClient
+    public void update(Product product) {
+        webClient
                 .put()
                 .uri("/{id}", product.getId())
                 .bodyValue(product)
@@ -47,8 +47,8 @@ public class ProductServiceWebClient implements ProductService {
     }
 
     @Override
-    public Product delete(Product product) {
-        return webClient
+    public void delete(Product product) {
+        webClient
                 .delete()
                 .uri("/{id}", product.getId())
                 .retrieve()
