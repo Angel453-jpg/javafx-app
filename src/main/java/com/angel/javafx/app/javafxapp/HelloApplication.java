@@ -1,9 +1,10 @@
 package com.angel.javafx.app.javafxapp;
 
 import com.angel.javafx.app.javafxapp.models.Product;
+import com.angel.javafx.app.javafxapp.services.ProductService;
+import com.angel.javafx.app.javafxapp.services.ProductServiceWebClient;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -14,12 +15,7 @@ import javafx.stage.Stage;
 
 public class HelloApplication extends Application {
 
-    private final ObservableList<Product> products = FXCollections.observableArrayList(
-            new Product("Laptop", "Alguna descripción", 1000L),
-            new Product("Mouse", "Alguna descripción del mouse", 500L),
-            new Product("CPU", "Alguna descripción del CPU", 800L),
-            new Product("Memoria Ram", "Alguna monitor legion", 1500L)
-    );
+    private final ProductService service = new ProductServiceWebClient();
 
     private Product productSelected = null;
 
@@ -48,6 +44,7 @@ public class HelloApplication extends Application {
             {
                 deleteButton.setOnAction(event -> {
                     Product product = getTableView().getItems().get(getIndex());
+                    service.delete(product);
                     tableView.getItems().remove(product);
                 });
             }
@@ -89,7 +86,7 @@ public class HelloApplication extends Application {
         });
 
         tableView.getColumns().addAll(nameColumn, descColumn, priceColumn, deleteColumn, editColumn);
-        tableView.setItems(this.products);
+        tableView.setItems(FXCollections.observableArrayList(service.findAll()));
 
         nameField.setPromptText("Nombre");
         descField.setPromptText("Descripción");
@@ -107,11 +104,14 @@ public class HelloApplication extends Application {
                     Long price = Long.parseLong(priceText);
 
                     if (productSelected == null) {
-                        products.add(new Product(name, description, price));
+                        Product product = new Product(name, description, price);
+                        Product createdProduct = service.save(product);
+                        tableView.getItems().add(createdProduct);
                     } else {
                         productSelected.setName(name);
                         productSelected.setDescription(description);
                         productSelected.setPrice(price);
+                        service.update(productSelected);
                         tableView.refresh();
                         productSelected = null;
                         addButton.setText("Agregar");
