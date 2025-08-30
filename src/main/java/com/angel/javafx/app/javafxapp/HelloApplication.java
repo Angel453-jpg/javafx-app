@@ -21,9 +21,13 @@ public class HelloApplication extends Application {
             new Product("Memoria Ram", "Alguna monitor legion", 1500L)
     );
 
+    private Product productSelected = null;
+
     private final TextField nameField = new TextField();
     private final TextField descField = new TextField();
     private final TextField priceField = new TextField();
+    private final Button addButton = new Button("Agregar");
+
 
     @Override
     public void start(Stage stage) {
@@ -59,14 +63,38 @@ public class HelloApplication extends Application {
             }
         });
 
-        tableView.getColumns().addAll(nameColumn, descColumn, priceColumn, deleteColumn);
+        TableColumn<Product, Void> editColumn = new TableColumn<>("Editar");
+        editColumn.setCellFactory(param -> new TableCell<>() {
+            private final Button editButton = new Button("Editar");
+
+            {
+                editButton.setOnAction(event -> {
+                    productSelected = getTableView().getItems().get(getIndex());
+                    nameField.setText(productSelected.getName());
+                    descField.setText(productSelected.getDescription());
+                    priceField.setText(String.valueOf(productSelected.getPrice()));
+                    addButton.setText("Editar");
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    setGraphic(editButton);
+                }
+            }
+        });
+
+        tableView.getColumns().addAll(nameColumn, descColumn, priceColumn, deleteColumn, editColumn);
         tableView.setItems(this.products);
 
         nameField.setPromptText("Nombre");
         descField.setPromptText("Descripción");
         priceField.setPromptText("Precio");
 
-        Button addButton = new Button("Agregar");
         addButton.setOnAction(event -> {
             String name = nameField.getText();
             String description = descField.getText();
@@ -77,7 +105,18 @@ public class HelloApplication extends Application {
                 try {
 
                     Long price = Long.parseLong(priceText);
-                    products.add(new Product(name, description, price));
+
+                    if (productSelected == null) {
+                        products.add(new Product(name, description, price));
+                    } else {
+                        productSelected.setName(name);
+                        productSelected.setDescription(description);
+                        productSelected.setPrice(price);
+                        tableView.refresh();
+                        productSelected = null;
+                        addButton.setText("Agregar");
+                    }
+
                     nameField.clear();
                     descField.clear();
                     priceField.clear();
@@ -96,10 +135,18 @@ public class HelloApplication extends Application {
 
         });
 
-        HBox formBox = new HBox(10, nameField, descField, priceField, addButton);
+        Button clearButton = new Button("Limpiar");
+        clearButton.setOnAction(event -> {
+            productSelected = null;
+            addButton.setText("Agregar");
+            nameField.clear();
+            descField.clear();
+            priceField.clear();
+        });
+        HBox formBox = new HBox(10, nameField, descField, priceField, addButton, clearButton);
         formBox.setPadding(new Insets(10));
         VBox vBox = new VBox(formBox, tableView);
-        Scene scene = new Scene(vBox, 640, 480);
+        Scene scene = new Scene(vBox, 680, 400);
         stage.setTitle("Gestion de productos!");
         stage.setScene(scene);
         stage.show();
