@@ -1,18 +1,14 @@
 package com.angel.javafx.app.javafxapp.controllers;
 
 import com.angel.javafx.app.javafxapp.models.Product;
-import com.angel.javafx.app.javafxapp.services.ProductService;
-import com.angel.javafx.app.javafxapp.services.ProductServiceWebClient;
-import javafx.collections.FXCollections;
+import com.angel.javafx.app.javafxapp.viewmodel.ProductViewModel;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 public class ProductController {
 
-    private final ProductService service = new ProductServiceWebClient();
-
-    private Product productSelected;
+    private final ProductViewModel viewModel = new ProductViewModel();
 
     @FXML
     private TableView<Product> tableView;
@@ -24,7 +20,7 @@ public class ProductController {
     private TableColumn<Product, String> descColumn;
 
     @FXML
-    private TableColumn<Product, Long> priceColumn;
+    private TableColumn<Product, Number> priceColumn;
 
     @FXML
     private TableColumn<Product, Void> editColumn;
@@ -47,111 +43,69 @@ public class ProductController {
     @FXML
     private Button clearButton;
 
-
     @FXML
-    private void initialize() {
+    public void initialize() {
 
+        //Bindings
+        nameField.textProperty().bindBidirectional(viewModel.nameProperty());
+        descField.textProperty().bindBidirectional(viewModel.descriptionProperty());
+        priceField.textProperty().bindBidirectional(viewModel.priceProperty());
+        addButton.textProperty().bind(viewModel.actionButtonTextProperty());
+
+        tableView.setItems(viewModel.getProducts());
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         descColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
         priceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
 
-        tableView.setItems(FXCollections.observableArrayList(service.findAll()));
-        addButton.setOnAction(e -> handleSaveOrUpdate());
-        clearButton.setOnAction(e -> clearForm());
-
-        setupEditColumn();
-        setupDeleteColumn();
-
-    }
-
-    private void handleSaveOrUpdate() {
-        String name = nameField.getText();
-        String description = descField.getText();
-        String priceText = priceField.getText();
-
-        if (name.isBlank() || description.isBlank() || priceText.isBlank()) {
-            showError("Todos los campos son obligatorios.");
-            return;
-        }
-
-        try {
-            Long price = Long.parseLong(priceText);
-
-            if (productSelected == null) {
-                Product newProduct = new Product(name, description, price);
-                Product created = service.save(newProduct);
-                tableView.getItems().add(created);
-            } else {
-                productSelected.setName(name);
-                productSelected.setDescription(description);
-                productSelected.setPrice(price);
-                service.update(productSelected);
-                tableView.refresh();
-                productSelected = null;
-                addButton.setText("Agregar");
+        //Eventos
+        addButton.setOnAction(e -> {
+            try {
+                viewModel.saveOrUpdate();
+            } catch (IllegalArgumentException ex) {
+                showError(ex.getMessage());
             }
+        });
 
-            clearForm();
+        clearButton.setOnAction(e -> viewModel.clearForm());
 
-        } catch (NumberFormatException ex) {
-            showError("El precio debe ser un número válido.");
-        }
-
-    }
-
-    private void clearForm() {
-        productSelected = null;
-        addButton.setText("Agregar");
-        nameField.clear();
-        descField.clear();
-        priceField.clear();
-    }
-
-    private void setupEditColumn() {
+        //Editar
         editColumn.setCellFactory(param -> new TableCell<>() {
-            private final Button editButton = new Button("Editar");
+            private final Button btn = new Button("Editar");
 
             {
-                editButton.setOnAction(event -> {
-                    productSelected = getTableView().getItems().get(getIndex());
-                    nameField.setText(productSelected.getName());
-                    descField.setText(productSelected.getDescription());
-                    priceField.setText(String.valueOf(productSelected.getPrice()));
-                    addButton.setText("Editar");
-                });
+                btn.setOnAction(e -> viewModel.edit(getTableView().getItems().get(getIndex())));
             }
 
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : editButton);
+                setGraphic(empty ? null : btn);
             }
         });
-    }
 
-    private void setupDeleteColumn() {
+        //Eliminar
         deleteColumn.setCellFactory(param -> new TableCell<>() {
-            private final Button deleteButton = new Button("Eliminar");
+            private final Button btn = new Button("Eliminar");
 
             {
-                deleteButton.setOnAction(event -> {
-                    Product product = getTableView().getItems().get(getIndex());
-                    service.delete(product);
-                    tableView.getItems().remove(product);
-                });
+                btn.setOnAction(e -> viewModel.delete(getTableView().getItems().get(getIndex())));
             }
 
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : deleteButton);
+                setGraphic(empty ? null : btn);
             }
         });
+
     }
 
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message);
-        alert.show();
+    private void showError(String msg) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error de validación");
+        alert.setHeaderText("No se pudo guardar el producto");
+        alert.setContentText(msg);
+        alert.showAndWait();
     }
 
 }
